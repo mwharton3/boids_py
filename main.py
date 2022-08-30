@@ -1,6 +1,7 @@
 # Import standard modules.
 import argparse
 import sys
+import svgwrite
 
 # Import non-standard modules.
 import pygame as pg
@@ -9,8 +10,24 @@ from pygame.locals import *
 # Import local modules
 from boid import Boid
 
-default_boids = 100
+###########################
+# DEFAULTS
+default_boids = 50
+num_frames = 1000
+
+# BOID PARAMETERS
+Boid.min_speed = 0.01
+Boid.max_speed = 0.2
+Boid.max_force = 1
+Boid.max_turn = 5
+Boid.perception = 100
+Boid.crowding = 15
+Boid.edge_distance_pct = 5
+###########################
+
+
 default_geometry = "1000x1000"
+boid_paths = [[] for _ in range(default_boids)]
 
 
 def update(dt, boids):
@@ -57,7 +74,7 @@ def update(dt, boids):
                 print("max force {}".format(boids.sprites()[0].max_force))
             elif event.key == pg.K_3:
                 for boid in boids:
-                    boid.perception *= .8
+                    boid.perception *= 0.8
                 print("perception {}".format(boids.sprites()[0].perception))
             elif event.key == pg.K_4:
                 for boid in boids:
@@ -81,7 +98,7 @@ def update(dt, boids):
                 boids.empty()
                 add_boids(boids, num_boids)
 
-    for b in boids:
+    for i, b in enumerate(boids):
         b.update(dt, boids)
 
 
@@ -94,8 +111,25 @@ def draw(screen, background, boids):
     boids.clear(screen, background)
     dirty = boids.draw(screen)
 
+    # Save the paths
+    for i, b in enumerate(boids):
+        boid_paths[i].append((b.position[0], b.position[1]))
+
     # Flip the display so that the things we drew actually show up.
     pg.display.update(dirty)
+
+
+def path2str(path):
+    pathstr = ""
+    for i, pt in enumerate(path):
+        basepath = f"{int(pt[0])},{int(pt[1])}"
+        if i == 0:
+            pathstr += "M" + basepath
+        elif i == 1:
+            pathstr += " C" + basepath
+        else:
+            pathstr += " " + basepath
+    return pathstr
 
 
 def main(args):
@@ -118,20 +152,33 @@ def main(args):
     screen = pg.display.set_mode((window_width, window_height), flags)
     screen.set_alpha(None)
     background = pg.Surface(screen.get_size()).convert()
-    background.fill(pg.Color('black'))
+    background.fill(pg.Color("black"))
 
     boids = pg.sprite.RenderUpdates()
 
     add_boids(boids, args.num_boids)
 
     # Main game loop.
-    dt = 1/fps  # dt is the time since last frame.
+    dt = 1 / fps  # dt is the time since last frame.
 
-    # Loop forever!
-    while True:
+    # Loop over all the frames
+    for _ in range(num_frames):
         update(dt, boids)
         draw(screen, background, boids)
         dt = fpsClock.tick(fps)
+
+    # Write the result to SVG
+    dwg = svgwrite.Drawing("boid_paths.svg", profile="tiny", size=("1000px", "1000px"))
+    for path in boid_paths:
+        dwg.add(
+            dwg.path(
+                d=path2str(path),
+                stroke="#000",
+                fill="none",
+                stroke_width=1,
+            )
+        )
+    dwg.save()
 
 
 def add_boids(boids, num_boids):
@@ -140,11 +187,20 @@ def add_boids(boids, num_boids):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='Emergent flocking.')
-    parser.add_argument('--geometry', metavar='WxH', type=str,
-                        default=default_geometry, help='geometry of window')
-    parser.add_argument('--number', dest='num_boids', default=default_boids,
-                        help='number of boids to generate')
+    parser = argparse.ArgumentParser(description="Emergent flocking.")
+    parser.add_argument(
+        "--geometry",
+        metavar="WxH",
+        type=str,
+        default=default_geometry,
+        help="geometry of window",
+    )
+    parser.add_argument(
+        "--number",
+        dest="num_boids",
+        default=default_boids,
+        help="number of boids to generate",
+    )
     args = parser.parse_args()
 
     main(args)

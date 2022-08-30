@@ -7,8 +7,8 @@ class Boid(Vehicle):
 
     # CONFIG
     debug = False
-    min_speed = .01
-    max_speed = .2
+    min_speed = 0.01
+    max_speed = 0.2
     max_force = 1
     max_turn = 5
     perception = 60
@@ -21,16 +21,19 @@ class Boid(Vehicle):
         Boid.set_boundary(Boid.edge_distance_pct)
 
         # Randomize starting position and velocity
-        start_position = pg.math.Vector2(
-            uniform(0, Boid.max_x),
-            uniform(0, Boid.max_y))
+        start_position = pg.math.Vector2(uniform(0, Boid.max_x), uniform(0, Boid.max_y))
         start_velocity = pg.math.Vector2(
-            uniform(-1, 1) * Boid.max_speed,
-            uniform(-1, 1) * Boid.max_speed)
+            uniform(-1, 1) * Boid.max_speed, uniform(-1, 1) * Boid.max_speed
+        )
 
-        super().__init__(start_position, start_velocity,
-                         Boid.min_speed, Boid.max_speed,
-                         Boid.max_force, Boid.can_wrap)
+        super().__init__(
+            start_position,
+            start_velocity,
+            Boid.min_speed,
+            Boid.max_speed,
+            Boid.max_force,
+            Boid.can_wrap,
+        )
 
         self.rect = self.image.get_rect(center=self.position)
 
